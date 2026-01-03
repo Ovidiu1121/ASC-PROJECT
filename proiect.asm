@@ -8,7 +8,7 @@ data SEGMENT
     len     db 0
     C       dw ?
     msgInput db 'Introduceti octetii in format hex: $'
-    msgSorted db 0Dh, 0Ah, 'Sirul sortat: $'  ;0Dh, 0Ah = enter (linie noua)
+    msgSorted db 0Dh, 0Ah, 'Sirul sortat: $'  
     msgC      db 0Dh,0Ah,'Cuvantul C calculat: $'
     msgRotate db 0Dh,0Ah,'Sirul dupa rotiri: $'
 data ENDS
