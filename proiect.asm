@@ -13,7 +13,6 @@ code SEGMENT
 start:
     mov ax, data
     mov ds, ax
-
     mov ah, 0Ah
     lea dx, inbuf
     int 21h
@@ -79,7 +78,6 @@ DoneParse:
 
     cmp bl, 8
     jb  Finish
-
     xor al, al
     lea si, sir
     mov cl, len
@@ -121,11 +119,60 @@ OrLoop:
     or  al, dl
 
     mov C, ax
+    mov cl, len
+    dec cl
+OuterSort:
+    lea si, sir
+    mov ch, cl
+
+InnerSort:
+    mov al, [si]
+    mov ah, [si+1]
+    cmp al, ah
+    jae NoSwap
+
+    mov [si], ah
+    mov [si+1], al
+
+NoSwap:
+    inc si
+    dec ch
+    jnz InnerSort
+    dec cl
+    jnz OuterSort
+    lea si, sir
+    mov cl, len
+    xor ch, ch
+
+    xor bh, bh
+    xor bl, bl
+    xor dl, dl
+
+CheckNext:
+    mov al, [si]
+    call CountBits
+
+    cmp al, 3
+    jbe SkipElem
+
+    cmp al, bh
+    jbe SkipElem
+
+    mov bh, al
+    mov dl, bl
+
+SkipElem:
+    inc si
+    inc bl
+    loop CheckNext
+
+    inc dl
+    xor dh, dh
+    mov C, dx
 
 Finish:
     mov ax, 4C00h
     int 21h
-
 HexToNibble PROC
     cmp al, '0'
     jb  HBad
@@ -165,6 +212,21 @@ HBad:
     stc
     ret
 HexToNibble ENDP
+
+CountBits PROC
+    push cx
+    mov cl, 8
+    xor ah, ah
+
+BitLoop:
+    shr al, 1
+    adc ah, 0
+    loop BitLoop
+
+    mov al, ah
+    pop cx
+    ret
+CountBits ENDP
 
 code ENDS
 END start
