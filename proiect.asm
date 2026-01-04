@@ -14,7 +14,6 @@ data SEGMENT
     len     db 0; lungimea sirului
     C       dw ?; cuvantul C calculat
     valMax db ?
-
     ;------Mesaje pentru afisare-----
     msgInput db 'Introduceti octetii in format hex: $'
     msgSorted db 0Dh, 0Ah, 'Sirul sortat: $'  ;0Dh, 0Ah = enter (linie noua)
@@ -202,6 +201,7 @@ SkipElem:
 
     xor dh, dh
 
+
 ;---SORTARE DESCRESCATOARE (Bubble Sort)---
     mov cl, len
     dec cl
@@ -243,14 +243,13 @@ PrintSortedLoop:
     dec cx
     jnz PrintSortedLoop
 
-
    ;---DETERMINARE POZITIE IN SIRUL SORTAT---
     lea si, sir
     mov cl, len
     xor ch, ch
     xor bl, bl          ; index (0-based)
 
-    FindSorted:
+FindSorted:
     mov al, [si]
     cmp al, valMax
     je FoundSorted
@@ -259,7 +258,6 @@ PrintSortedLoop:
     inc bl
     dec cx
     jnz FindSorted
-
     FoundSorted:
     inc bl              ; indexare de la 1
     mov dl, bl
@@ -271,6 +269,8 @@ PrintSortedLoop:
 
     add dl, '0'
     call PrintChar
+
+    xor dh, dh
 
 ;---AFISARE C (HEX + BINAR)---
     lea dx, msgC ;mesaj
