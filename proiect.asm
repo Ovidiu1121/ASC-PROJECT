@@ -14,7 +14,6 @@ data SEGMENT
     len     db 0; lungimea sirului
     C       dw ?; cuvantul C calculat
     valMax db ?
-
     ;------Mesaje pentru afisare-----
     msgInput db 'Introduceti octetii in format hex: $'
     msgSorted db 0Dh, 0Ah, 'Sirul sortat: $'  ;0Dh, 0Ah = enter (linie noua)
@@ -289,6 +288,7 @@ PrintSortedLoop:
     ;Binar (byte superior)
     mov al, byte ptr C+1  ;byte superior
     call PrintBinaryByte
+
     mov dl, ' '
     call PrintChar
 
@@ -306,9 +306,10 @@ RotateLoop:
     mov al, [si]
 
     call GetFirst2BitsSum
-    mov cl, al
+    mov bl, al
 
     mov al, [si]
+    mov cl, bl
     rol al, cl
     mov [si], al
 
