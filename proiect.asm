@@ -14,7 +14,6 @@ data SEGMENT
     len     db 0; lungimea sirului
     C       dw ?; cuvantul C calculat
     valMax db ?
-
     ;------Mesaje pentru afisare-----
     msgInput db 'Introduceti octetii in format hex: $'
     msgSorted db 0Dh, 0Ah, 'Sirul sortat: $'  ;0Dh, 0Ah = enter (linie noua)
@@ -202,6 +201,7 @@ SkipElem:
 
     xor dh, dh
 
+
 ;---SORTARE DESCRESCATOARE (Bubble Sort)---
     mov cl, len
     dec cl
@@ -243,14 +243,13 @@ PrintSortedLoop:
     dec cx
     jnz PrintSortedLoop
 
-
    ;---DETERMINARE POZITIE IN SIRUL SORTAT---
     lea si, sir
     mov cl, len
     xor ch, ch
     xor bl, bl          ; index (0-based)
 
-    FindSorted:
+FindSorted:
     mov al, [si]
     cmp al, valMax
     je FoundSorted
@@ -259,7 +258,6 @@ PrintSortedLoop:
     inc bl
     dec cx
     jnz FindSorted
-
     FoundSorted:
     inc bl              ; indexare de la 1
     mov dl, bl
@@ -272,44 +270,53 @@ PrintSortedLoop:
     add dl, '0'
     call PrintChar
 
+    xor dh, dh
+
 ;---AFISARE C (HEX + BINAR)---
     lea dx, msgC ;mesaj
     call PrintString
 
+    ;HEX
     mov al, byte ptr C+1 ;byte superior
     call PrintHexByte
     mov al, byte ptr C   ;byte inferior
     call PrintHexByte  ;afisam C in hex
 	
+    ;separator
     mov dl, ' ' ;spatiu intre hex si binar
     call PrintChar
 
+    ;Binar (byte superior)
     mov al, byte ptr C+1  ;byte superior
     call PrintBinaryByte
+
+    mov dl, ' '
+    call PrintChar
+
+   ;Binar (byte inferior)
     mov al, byte ptr C    ;byte inferior
     call PrintBinaryByte
+    call PrintNewLine
 
 ;---ROTIREA FIECARUI OCTET---
     lea si, sir ;si=inceputul sirului de octeti
     mov cl, len ;cl=nr de octeti
     xor ch,ch   ;cx=contor pentru bucla
 
-RotateLoop: 
-    mov al, [si] ;octetul curent din sir
+RotateLoop:
+    mov al, [si] ;AL=octetul curent
 
-    ;calcul N=suma primilor 2 biti
-    mov bl, al ;copiem octetul in bl
-    and bl, 00000011b ;pastram doar bitul 0 si bitul 1, BL=N
-   
-    push cx  ;salvam contorul
-    mov cl, bl
-    rol al, cl     ;rotire circulara la stanga cu N pozitii
-    pop cx    ;refacem contorul
+    call GetFirst2BitsSum 
+    mov cl, al    ;cl=numar de rotiri
 
-    mov [si], al      ;salvam rezultatul 
-    inc si   ;trecem la urmatorul octet 
+    mov al, [si] ;reincarca octetul
+    rol al, cl   ;rotire stanga cu cl pozitii
+    mov [si], al
+
+    inc si
     dec cx
-    jnz RotateLoop 
+    jnz RotateLoop
+
 ;---AFISARE SIR DUPA ROTIRI---
 lea dx, msgRotate
 call PrintString ;mesaj
@@ -474,10 +481,15 @@ PrintNewLine ENDP
 
 GetFirst2BitsSum PROC
     ; IN:  AL = octet
-    ; OUT: AL = suma primilor 2 biti (0..2)
-    and al, 00000011b
+    ; OUT: AL = suma bitilor 0 si 1 (0..2)
+    mov ah, al
+    and al, 1        ; bit0
+    shr ah, 1
+    and ah, 1        ; bit1
+    add al, ah
     ret
 GetFirst2BitsSum ENDP
+
 
 PrintString PROC ;afisarea unui mesaj
    mov ah, 09h
