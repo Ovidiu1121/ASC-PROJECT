@@ -13,11 +13,13 @@ data SEGMENT
     sir     db 16 dup(?); sirul de octeti maxim 16
     len     db 0; lungimea sirului
     C       dw ?; cuvantul C calculat
+    valMax db ?
 
     ;------Mesaje pentru afisare-----
     msgInput db 'Introduceti octetii in format hex: $'
     msgSorted db 0Dh, 0Ah, 'Sirul sortat: $'  ;0Dh, 0Ah = enter (linie noua)
     msgPos db 0Dh,0Ah,'Pozitia octetului cu cei mai multi biti 1: $'
+    msgPosSort db 0Dh,0Ah,'Pozitia in sirul sortat: $'
     msgC      db 0Dh,0Ah,'Cuvantul C calculat: $'
     msgRotate db 0Dh,0Ah,'Sirul dupa rotiri: $'
 data ENDS
@@ -157,6 +159,49 @@ OrLoop:
 
     mov C, ax; C final
 
+;---DETERMINARE OCTET CU MAXIM DE BITI1 (>3)
+    lea si, sir
+    mov cl, len
+    xor ch, ch
+
+    xor bh, bh; max biti
+    xor bl, bl; index curent
+    xor dl, dl; pozitie
+
+CheckNext:
+    mov al, [si]
+    call CountBits
+
+    cmp al, 3
+    jbe SkipElem
+
+    cmp al, bh
+    jbe SkipElem
+
+    mov bh, al
+    mov dl, bl
+    mov al, [si]
+    mov valMax, al
+
+SkipElem:
+    inc si
+    inc bl
+    dec cx
+    jnz CheckNext
+    ;loop CheckNext
+
+    inc dl
+    push dx
+
+    lea dx, msgPos
+    call PrintString
+
+    pop dx
+    add dl, '0'        ; conversie cifră → ASCII
+    call PrintChar
+
+    xor dh, dh
+
 ;---SORTARE DESCRESCATOARE (Bubble Sort)---
     mov cl, len
     dec cl
@@ -198,46 +243,34 @@ PrintSortedLoop:
     dec cx
     jnz PrintSortedLoop
 
-;---DETERMINARE OCTET CU MAXIM DE BITI1 (>3)
+
+   ;---DETERMINARE POZITIE IN SIRUL SORTAT---
     lea si, sir
     mov cl, len
     xor ch, ch
+    xor bl, bl          ; index (0-based)
 
-    xor bh, bh; max biti
-    xor bl, bl; index curent
-    xor dl, dl; pozitie
-
-CheckNext:
+    FindSorted:
     mov al, [si]
-    call CountBits
+    cmp al, valMax
+    je FoundSorted
 
-    cmp al, 3
-    jbe SkipElem
-
-    cmp al, bh
-    jbe SkipElem
-
-    mov bh, al
-    mov dl, bl
-
-SkipElem:
     inc si
     inc bl
     dec cx
-    jnz CheckNext
-    ;loop CheckNext
+    jnz FindSorted
 
-    inc dl
+    FoundSorted:
+    inc bl              ; indexare de la 1
+    mov dl, bl
+
     push dx
-
-    lea dx, msgPos
+    lea dx, msgPosSort
     call PrintString
-
     pop dx
-    add dl, '0'        ; conversie cifră → ASCII
-    call PrintChar
 
-    xor dh, dh
+    add dl, '0'
+    call PrintChar
 
 ;---AFISARE C (HEX + BINAR)---
     lea dx, msgC ;mesaj
@@ -277,7 +310,6 @@ RotateLoop:
     inc si   ;trecem la urmatorul octet 
     dec cx
     jnz RotateLoop 
-
 ;---AFISARE SIR DUPA ROTIRI---
 lea dx, msgRotate
 call PrintString ;mesaj
@@ -297,10 +329,7 @@ ShowLoop:
     mov al, [si]   ;reincarcam octetul
     call PrintBinaryByte ;afisarea in binar
 
-    mov dl, 0Dh
-    call PrintChar
-    mov dl, 0Ah
-    call PrintChar ;trecem la linie noua
+    call PrintNewLine
 
     inc si  ;trecem la urmatorul octet de afisat
     dec cx 
@@ -434,6 +463,21 @@ PrintBit:
     pop ax
     ret
 PrintBinaryByte ENDP
+
+PrintNewLine PROC
+    mov dl, 0Dh
+    call PrintChar
+    mov dl, 0Ah
+    call PrintChar
+    ret
+PrintNewLine ENDP
+
+GetFirst2BitsSum PROC
+    ; IN:  AL = octet
+    ; OUT: AL = suma primilor 2 biti (0..2)
+    and al, 00000011b
+    ret
+GetFirst2BitsSum ENDP
 
 PrintString PROC ;afisarea unui mesaj
    mov ah, 09h
