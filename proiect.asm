@@ -14,6 +14,7 @@ data SEGMENT
     len     db 0; lungimea sirului
     C       dw ?; cuvantul C calculat
     valMax db ?
+
     ;------Mesaje pentru afisare-----
     msgInput db 'Introduceti octetii in format hex: $'
     msgSorted db 0Dh, 0Ah, 'Sirul sortat: $'  ;0Dh, 0Ah = enter (linie noua)
