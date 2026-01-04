@@ -304,14 +304,13 @@ FindSorted:
     xor ch,ch   ;cx=contor pentru bucla
 
 RotateLoop:
-    mov al, [si]
+    mov al, [si] ;AL=octetul curent
 
-    call GetFirst2BitsSum
-    mov bl, al
+    call GetFirst2BitsSum 
+    mov cl, al    ;cl=numar de rotiri
 
-    mov al, [si]
-    mov cl, bl
-    rol al, cl
+    mov al, [si] ;reincarca octetul
+    rol al, cl   ;rotire stanga cu cl pozitii
     mov [si], al
 
     inc si
