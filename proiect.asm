@@ -1,43 +1,57 @@
+;-----SEGMENTUL DE DATE-----
 ASSUME cs:code, ds:data
 
 data SEGMENT
-    BUFMAX  EQU 64
+    BUFMAX  EQU 64 ; dimensiune maximă buffer input
+    ; buffer DOS pentru citire cu int 21h/ AH=0Ah
+    ; [0] = dim max
+    ; [1] = nr. caractere citite
+    ; [2...] = caracterele introduse 
+
     inbuf   db BUFMAX, 0, BUFMAX dup(0)
 
-    sir     db 16 dup(?)
-    len     db 0
-    C       dw ?
+    sir     db 16 dup(?); sirul de octeti maxim 16
+    len     db 0; lungimea sirului
+    C       dw ?; cuvantul C calculat
+
+    ;------Mesaje pentru afisare-----
     msgInput db 'Introduceti octetii in format hex: $'
     msgSorted db 0Dh, 0Ah, 'Sirul sortat: $'  ;0Dh, 0Ah = enter (linie noua)
+    msgPos db 0Dh,0Ah,'Pozitia octetului cu cei mai multi biti 1: $'
     msgC      db 0Dh,0Ah,'Cuvantul C calculat: $'
     msgRotate db 0Dh,0Ah,'Sirul dupa rotiri: $'
 data ENDS
 
+;----CODUL----
 code SEGMENT
 start:
     mov ax, data
     mov ds, ax
     
-    lea dx, msgInput ;mesaj
+    ;----Afisare mesaj input---
+    lea dx, msgInput 
     call PrintString
 
+    ;---Citire input(int 21h, AH = 0Ah)
     mov ah, 0Ah
     lea dx, inbuf
     int 21h
 
-    lea si, inbuf+2
-    mov cl, inbuf[1]
+    ;---Parsare si conversie HEX - BINAR---
+    lea si, inbuf+2; si = primul caracter citit
+    mov cl, inbuf[1]; cl = nr. de caractere
     xor ch, ch
 
-    lea di, sir
-    xor bl, bl
+    lea di, sir; di = inceputul sirului
+    xor bl, bl; bl = nr. de octeti cititi
 
 ParseNext:
     cmp cx, 0
     je  DoneParse
-    cmp bl, 16
+    cmp bl, 16; maxim 16 octeti
     je  DoneParse
 
+;---sarim peste separatori---
 SkipJunk:
     cmp cx, 0
     je  DoneParse
@@ -55,14 +69,15 @@ SkipOne:
     dec cx
     jmp SkipJunk
 
+;---citim 2 caractere hex---
 NeedTwoHex:
     cmp cx, 2
     jb  DoneParse
 
     mov al, [si]
-    call HexToNibble
+    call HexToNibble; conversie hex-nibble
     jc  DoneParse
-    shl al, 4
+    shl al, 4; nibble superior
     mov ah, al
 
     inc si
@@ -71,23 +86,29 @@ NeedTwoHex:
     mov al, [si]
     call HexToNibble
     jc  DoneParse
-    or  al, ah
+    or  al, ah; formam octetul complet
 
-    mov [di], al
+    mov [di], al; salvam octetul
     inc di
     inc bl
 
     inc si
-    dec cx
+    dec cx 
     jmp ParseNext
 
 DoneParse:
-    mov len, bl
+    mov len, bl; salvam lungimea sirului
 
+    ;---VERIFICARE MINIM 8 OCTETI---
     cmp bl, 8
-    jae ContinueProgram   ; condiția inversă
-    jmp Finish            ; salt NEAR (fără limită)
-    ContinueProgram:
+    jae ContinueProgram   ; dacă avem >=8 octeți, continuăm
+    jmp Finish            ; altfel ieșim din program
+
+ContinueProgram:
+
+;---CALCULUL CUVANTULUI C---
+
+;---PAS 3: suma octetilor modulo 256---
     xor al, al
     lea si, sir
     mov cl, len
@@ -95,8 +116,12 @@ DoneParse:
 SumLoop:
     add al, [si]
     inc si
-    loop SumLoop
-   
+    ;loop SumLoop
+    dec cx
+    jnz SumLoop
+    mov ah, al
+
+;---PAS 1: XOR intre nibble inferior de la primul octet si nibble superior de la ultimul octet
     lea si, sir
     mov dl, [si]
     and dl, 0Fh
@@ -111,6 +136,7 @@ SumLoop:
     and al, 0Fh
     xor dl, al
 
+;---PAS 2: OR intre bitii 2-5 ai tuturor octetilor
     xor bh, bh
     lea si, sir
     mov cl, len
@@ -121,21 +147,22 @@ OrLoop:
     and al, 0Fh
     or  bh, al
     inc si
-    loop OrLoop
+    ;loop OrLoop
+    dec cx
+    jnz OrLoop
 
     mov al, bh
     shl al, 4
     or  al, dl
 
-    mov word ptr C, ax
+    mov C, ax; C final
+
+;---SORTARE DESCRESCATOARE (Bubble Sort)---
     mov cl, len
     dec cl
 OuterSort:
-    push cx
     lea si, sir
-    mov cl, len
-    xor ch, ch
-    dec cx
+    mov ch, cl
 
 InnerSort:
     mov al, [si]
@@ -148,22 +175,37 @@ InnerSort:
 
 NoSwap:
     inc si
-    dec cx
+    dec ch
     jnz InnerSort
-    pop cx
-    dec cx
+    dec cl
     jnz OuterSort
 
-    lea dx, msgSorted ;mesaj
-    call PrintString
+;---AFISARE SIR SORTAT---
+lea dx, msgSorted
+call PrintString
 
+lea si, sir
+mov cl, len
+xor ch, ch
+
+PrintSortedLoop:
+    mov al, [si]
+    call PrintHexByte
+    mov dl, ' '
+    call PrintChar
+
+    inc si
+    dec cx
+    jnz PrintSortedLoop
+
+;---DETERMINARE OCTET CU MAXIM DE BITI1 (>3)
     lea si, sir
     mov cl, len
     xor ch, ch
 
-    xor bh, bh
-    xor bl, bl
-    xor dl, dl
+    xor bh, bh; max biti
+    xor bl, bl; index curent
+    xor dl, dl; pozitie
 
 CheckNext:
     mov al, [si]
@@ -181,12 +223,23 @@ CheckNext:
 SkipElem:
     inc si
     inc bl
-    loop CheckNext
+    dec cx
+    jnz CheckNext
+    ;loop CheckNext
 
     inc dl
+    push dx
+
+    lea dx, msgPos
+    call PrintString
+
+    pop dx
+    add dl, '0'        ; conversie cifră → ASCII
+    call PrintChar
+
     xor dh, dh
-    mov word ptr C, dx
-    
+
+;---AFISARE C (HEX + BINAR)---
     lea dx, msgC ;mesaj
     call PrintString
 
@@ -202,14 +255,8 @@ SkipElem:
     call PrintBinaryByte
     mov al, byte ptr C    ;byte inferior
     call PrintBinaryByte
-    
-    ; ENTER
-    mov dl, 0Dh
-    call PrintChar
-    mov dl, 0Ah
-    call PrintChar
 
-;rotirea fiecarui octet:
+;---ROTIREA FIECARUI OCTET---
     lea si, sir ;si=inceputul sirului de octeti
     mov cl, len ;cl=nr de octeti
     xor ch,ch   ;cx=contor pentru bucla
@@ -228,7 +275,10 @@ RotateLoop:
 
     mov [si], al      ;salvam rezultatul 
     inc si   ;trecem la urmatorul octet 
-    loop RotateLoop 
+    dec cx
+    jnz RotateLoop 
+
+;---AFISARE SIR DUPA ROTIRI---
 lea dx, msgRotate
 call PrintString ;mesaj
 
@@ -253,7 +303,8 @@ ShowLoop:
     call PrintChar ;trecem la linie noua
 
     inc si  ;trecem la urmatorul octet de afisat
-    loop ShowLoop
+    dec cx 
+    jnz ShowLoop
 
 
 Finish:
@@ -356,31 +407,32 @@ Digit:
 NibbleToHex ENDP
 
 PrintBinaryByte PROC
-   push ax
-   push bx
-   push cx
-   push dx
+    push ax
+    push bx
+    push cx
+    push dx
 
-   mov bl, al
-   mov cx, 8
+    mov bl, al        ; salvăm octetul
+    mov cx, 8
 
 BitLoop:
-   shl bl, 1
-   jc BitOne
-   mov dl, '0'
-   jmp PrintBit
+    shl bl, 1         ; MSB → CF
+    jc BitOne
+    mov dl, '0'
+    jmp PrintBit
 
 BitOne:
-   mov dl, '1'
+    mov dl, '1'
 
 PrintBit:
-   call PrintChar
-   loop BitLoop
-   pop dx
-   pop cx
-   pop bx
-   pop ax
-   ret
+    call PrintChar
+    loop BitLoop
+
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
 PrintBinaryByte ENDP
 
 PrintString PROC ;afisarea unui mesaj
