@@ -100,10 +100,15 @@ NeedTwoHex:
 DoneParse:
     mov len, bl; salvam lungimea sirului
 
-    ;---VERIFICARE MINIM 8 OCTETI---
-    cmp bl, 8
-    jae ContinueProgram   ; dacă avem >=8 octeți, continuăm
-    jmp Finish            ; altfel ieșim din program
+   ;---VERIFICARE NUMAR OCTETI [8..16]---
+   cmp bl, 8
+   jae CheckMax
+   jmp Finish
+
+   CheckMax:
+   cmp bl, 16
+   jbe ContinueProgram
+   jmp Finish
 
 ContinueProgram:
 
