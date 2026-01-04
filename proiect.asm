@@ -201,8 +201,7 @@ SkipElem:
     call PrintString
 
     pop dx
-    add dl, '0'        ; conversie cifră → ASCII
-    call PrintChar
+    call PrintPos1to16
 
     xor dh, dh
 
@@ -272,8 +271,7 @@ FindSorted:
     call PrintString
     pop dx
 
-    add dl, '0'
-    call PrintChar
+    call PrintPos1to16
 
     xor dh, dh
 
@@ -504,5 +502,27 @@ PrintString PROC ;afisarea unui mesaj
    int 21h
    ret
 PrintString ENDP
+
+PrintPos1to16 PROC
+    ; IN: DL = pozitie (1..16)
+    cmp dl, 10
+    jb  OneDigit
+
+    ; doua cifre: 10..16
+    mov al, dl
+    sub al, 10          ; 0..6
+    mov dl, '1'
+    call PrintChar
+    mov dl, al
+    add dl, '0'
+    call PrintChar
+    ret
+
+OneDigit:
+    add dl, '0'
+    call PrintChar
+    ret
+PrintPos1to16 ENDP
+
 code ENDS
 END start
