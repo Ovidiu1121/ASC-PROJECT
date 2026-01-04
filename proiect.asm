@@ -299,25 +299,28 @@ FindSorted:
     call PrintNewLine
 
 ;---ROTIREA FIECARUI OCTET---
-    lea si, sir ;si=inceputul sirului de octeti
-    mov cl, len ;cl=nr de octeti
-    xor ch,ch   ;cx=contor pentru bucla
+    lea si, sir
+    xor cx, cx
+    mov cl, len
 
 RotateLoop:
-    mov al, [si] ;AL=octetul curent
+    mov al, [si]
 
-    call GetFirst2BitsSum 
-    mov cl, al    ;cl=numar de rotiri
+    call GetFirst2BitsSum
+    mov bl, al           ; BL = N
 
-    mov al, [si] ;reincarca octetul
-    rol al, cl   ;rotire stanga cu cl pozitii
+    mov al, [si]
+RotateN:
+    rol al, 1
+    dec bl
+    jnz RotateN
+
     mov [si], al
-
     inc si
-    dec cx
-    jnz RotateLoop
+    loop RotateLoop
 
 ;---AFISARE SIR DUPA ROTIRI---
+call PrintNewLine
 lea dx, msgRotate
 call PrintString ;mesaj
 
