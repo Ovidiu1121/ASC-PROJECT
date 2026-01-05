@@ -17,5 +17,5 @@ operații pe biți, sortări și rotiri conform cerinței.
 
 ## Fișiere
 - `proiect.asm` – codul sursă
-- `docs/documentatie.pdf` – documentația proiectului
+- `docs/documentatie.docx` – documentația proiectului
 
